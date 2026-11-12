@@ -1,0 +1,302 @@
+@startuml
+!pragma layout smetana
+title File Management System - UML Class Diagram (Bridge + Proxy)
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #444444
+}
+
+' ------------------------------------------------------------ service
+package "service" {
+  interface FileService <<Subject>> {
+    +createFile(actor, name, type, content) : FileRecord
+    +readFile(actor, fileId) : String
+    +renameFile(actor, fileId, newName) : FileRecord
+    +deleteFile(actor, fileId)
+    +shareFile(actor, fileId, target) : FileRecord
+    +getFileInfo(actor, fileId) : FileRecord
+    +listFiles(actor) : List<FileRecord>
+    +searchByName(actor, query) : List<FileRecord>
+    +createFolder(actor, name) : Folder
+    +getFolder(actor, folderId) : Folder
+    +listFolders(actor) : List<Folder>
+    +listFolderContents(actor, folderId) : List<FileRecord>
+    +moveFileToFolder(actor, fileId, folderId) : FileRecord
+    +deleteFolder(actor, folderId)
+  }
+
+  abstract class FileManager <<Bridge: Abstraction>> {
+    -storage : StorageBackend
+    #metadata : MetadataRepository
+    #storeContent(id, data)
+    #loadContent(id) : byte[]
+    #removeContent(id)
+    +storageName() : String
+    +switchStorage(target : StorageBackend)
+  }
+
+  class DefaultFileManager <<Refined Abstraction / Real Subject>> {
+    -users : UserDirectory
+    -requireFile(id) : FileRecord
+    -requireFolder(id) : Folder
+    -ensureFileNameFree(owner, name, type, ignoreId)
+  }
+}
+
+' ------------------------------------------------------------ proxy
+package "proxy" {
+  class ProtectionProxy <<Protection Proxy>> {
+    -realSubject : FileService
+    -checker : PermissionChecker
+    -users : UserDirectory
+    -auditLog : Consumer<String>
+    -authorize(actor, fileId, permission) : FileRecord
+    -requireKnownUser(actor, action)
+  }
+
+  class PermissionChecker {
+    +roleOf(user, file) : Optional<Role>
+    +isAllowed(user, file, permission) : boolean
+    +ownsFolder(user, folder) : boolean
+  }
+}
+
+' ------------------------------------------------------------ storage
+package "storage" {
+  interface StorageBackend <<Bridge: Implementor>> {
+    +name() : String
+    +write(contentId, data)
+    +read(contentId) : byte[]
+    +delete(contentId)
+    +exists(contentId) : boolean
+  }
+
+  class LocalFileStorage <<Concrete Implementor>> {
+    -root : Path
+    -pathFor(contentId) : Path
+  }
+  class DatabaseStorage <<Concrete Implementor>> {
+    -database : Database
+  }
+  class InMemoryStorage <<Concrete Implementor>> {
+    -contents : Map<String, byte[]>
+  }
+
+  enum StorageType {
+    LOCAL
+    DATABASE
+    +parse(raw) : StorageType
+    +other() : StorageType
+  }
+  class StorageFactory {
+    +{static} create(type, dataDir, database) : StorageBackend
+  }
+}
+
+' ------------------------------------------------------------ repository
+package "repository" {
+  interface MetadataRepository {
+    +saveFile(file)
+    +findFile(id) : Optional<FileRecord>
+    +findAllFiles() : List<FileRecord>
+    +findFilesInFolder(folderId) : List<FileRecord>
+    +deleteFile(id)
+    +saveFolder(folder)
+    +findFolder(id) : Optional<Folder>
+    +findAllFolders() : List<Folder>
+    +deleteFolder(id)
+  }
+  class SqliteMetadataRepository
+  class Database {
+    +update(sql, params...)
+    +query(sql, mapper, params...) : List<T>
+    +inTransaction(work)
+    +getSetting(key) : Optional<String>
+    +putSetting(key, value)
+  }
+}
+
+' ------------------------------------------------------------ model
+package "model" {
+  class User <<record>> {
+    +id : String
+    +displayName : String
+  }
+  class UserDirectory {
+    +{static} predefined() : UserDirectory
+    +all() : List<User>
+    +find(id) : Optional<User>
+    +contains(user) : boolean
+  }
+  class FileRecord <<record>> {
+    +id : String
+    +name : String
+    +type : FileType
+    +size : long
+    +createdAt : Instant
+    +ownerId : String
+    +folderId : String
+    +sharedWith : Set<String>
+    +withName(n) : FileRecord
+    +withFolder(f) : FileRecord
+    +withSharedUser(u) : FileRecord
+  }
+  class Folder <<record>> {
+    +id : String
+    +name : String
+    +ownerId : String
+    +createdAt : Instant
+  }
+  enum FileType {
+    TXT
+    MD
+    JSON
+    CSV
+    XML
+    LOG
+  }
+  enum Role {
+    OWNER
+    VIEWER
+    +allows(permission) : boolean
+  }
+  enum Permission {
+    READ
+    RENAME
+    DELETE
+    SHARE
+    MOVE
+  }
+}
+
+' ------------------------------------------------------------ app
+package "app" {
+  class FileSystemContext <<composition root>> {
+    -manager : DefaultFileManager
+    -proxy : FileService
+    -storageType : StorageType
+    +{static} open(dataDir, requested, auditLog) : FileSystemContext
+    +service() : FileService
+    +switchStorage(target : StorageType)
+  }
+  class ConsoleApp
+  class DemoRunner
+  class Main
+}
+
+' ------------------------------------------------------------ web (browser client)
+package "web" {
+  class WebServer <<browser client>> {
+    -api : ApiRouter
+    +{static} DEFAULT_PORT : int = 8421
+    +start()
+    +port() : int
+    +close()
+  }
+  class ApiRouter <<package-private>> {
+    -context : FileSystemContext
+    -service : FileService
+    -trail : AuditTrail
+    -checker : PermissionChecker
+    ~handle(request : Request) : Response
+  }
+  class Request <<record>>
+  class Response <<record>>
+  class AuditTrail <<Consumer of proxy log lines>> {
+    +accept(message)
+    +since(afterSeq) : List<Entry>
+  }
+  class Json <<package-private>> {
+    +{static} toJson(value) : String
+  }
+}
+
+' ------------------------------------------------------------ exceptions
+package "exception" {
+  class FileManagerException
+  class ValidationException
+  class NotFoundException
+  class ConflictException
+  class AccessDeniedException
+  class StorageException
+}
+FileManagerException <|-- ValidationException
+FileManagerException <|-- NotFoundException
+FileManagerException <|-- ConflictException
+FileManagerException <|-- AccessDeniedException
+FileManagerException <|-- StorageException
+
+' ============================================================ relationships
+' Proxy pattern
+FileService <|.. FileManager
+FileService <|.. ProtectionProxy
+FileManager <|-- DefaultFileManager
+ProtectionProxy o-- FileService : realSubject
+ProtectionProxy --> PermissionChecker
+ProtectionProxy --> UserDirectory
+
+' Bridge pattern
+FileManager o-- StorageBackend : storage\n(bridge by composition)
+StorageBackend <|.. LocalFileStorage
+StorageBackend <|.. DatabaseStorage
+StorageBackend <|.. InMemoryStorage
+
+' persistence
+FileManager --> MetadataRepository
+MetadataRepository <|.. SqliteMetadataRepository
+SqliteMetadataRepository --> Database
+DatabaseStorage --> Database
+DefaultFileManager --> UserDirectory
+
+' model
+UserDirectory o-- User
+FileRecord --> FileType
+Role ..> Permission
+PermissionChecker ..> Role
+PermissionChecker ..> FileRecord
+MetadataRepository ..> FileRecord
+MetadataRepository ..> Folder
+FileService ..> FileRecord
+FileService ..> Folder
+FileService ..> User
+
+' composition root
+FileSystemContext --> ProtectionProxy : creates
+FileSystemContext --> DefaultFileManager : creates (private)
+FileSystemContext --> StorageFactory
+StorageFactory ..> StorageType
+StorageFactory ..> StorageBackend
+ConsoleApp --> FileService
+ConsoleApp --> FileSystemContext
+DemoRunner --> FileSystemContext
+Main --> ConsoleApp
+Main --> DemoRunner
+Main --> WebServer
+
+' web client: receives only the proxy
+WebServer --> ApiRouter
+ApiRouter --> FileSystemContext : service() = proxy only
+ApiRouter ..> FileService : every request
+ApiRouter --> AuditTrail
+ApiRouter ..> Request
+ApiRouter ..> Response
+Response ..> Json
+ApiRouter ..> PermissionChecker : role badge (display only)
+
+note bottom of ProtectionProxy
+  Client code only ever holds a FileService that
+  points at ProtectionProxy. Denied calls throw
+  AccessDeniedException and are never forwarded.
+end note
+
+note bottom of FileManager
+  FileManager never names a concrete storage class.
+  Storage can be swapped (switchStorage) without
+  modifying FileManager / DefaultFileManager.
+end note
+@enduml

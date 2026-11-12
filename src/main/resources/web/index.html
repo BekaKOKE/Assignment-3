@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File Manager - Bridge + Proxy</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>File Manager</h1>
+      <span class="sub">Bridge + Protection Proxy demo</span>
+    </div>
+    <div class="controls">
+      <label class="who">Acting as
+        <select id="userSelect" aria-label="Acting user"></select>
+      </label>
+      <div class="storage" title="Bridge: the FileManager talks to a StorageBackend interface. Switching swaps the implementation at runtime.">
+        <span>Storage</span>
+        <strong id="storageName">-</strong>
+        <button id="switchStorage" class="ghost" type="button">Switch</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Folders</h2>
+      <ul id="folderList" class="folders"></ul>
+      <button id="newFolder" class="primary wide" type="button">+ New folder</button>
+
+      <div class="legend">
+        <h2>Roles</h2>
+        <p><span class="badge owner">OWNER</span> read, rename, delete, share, move</p>
+        <p><span class="badge viewer">VIEWER</span> read only (files shared with you)</p>
+        <p class="hint">All buttons stay enabled on purpose: try an action you are not allowed to do and watch the proxy refuse it.</p>
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search files by name" autocomplete="off" aria-label="Search files by name">
+        <button id="newFile" class="primary" type="button">+ New file</button>
+      </div>
+      <h2 id="viewTitle">All files</h2>
+      <div class="table-wrap">
+        <table class="files">
+          <thead>
+            <tr>
+              <th>Name</th><th>Size</th><th>Owner</th><th>Your role</th><th>Created</th>
+              <th>Shared with</th><th>Folder</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fileRows"></tbody>
+        </table>
+      </div>
+      <p id="emptyNote" class="empty" hidden>Nothing to show here yet.</p>
+    </section>
+
+    <aside class="log">
+      <h2>Proxy decisions <span class="live">live</span></h2>
+      <ol id="logList"></ol>
+    </aside>
+  </main>
+
+  <div id="toasts" aria-live="polite"></div>
+
+  <dialog id="dialog">
+    <form id="dialogForm">
+      <h3 id="dialogTitle"></h3>
+      <div id="dialogFields"></div>
+      <pre id="dialogBody" hidden></pre>
+      <menu>
+        <button type="button" id="dialogCancel" class="ghost">Cancel</button>
+        <button type="submit" id="dialogOk" class="primary">OK</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+target/
+data/
+*.db
+.idea/
+*.iml
+out/
+
+# files left in the project folder by editor / assistant tooling
+agentdb.rvf
+agentdb.rvf.lock
+.claude-flow/
+.claude/
