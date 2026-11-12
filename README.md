@@ -89,21 +89,27 @@ ruslan:   6 rename -> f0d09978                                    => ! Access de
 
 `java -jar target/file-manager.jar --web`, then open **http://localhost:8421/** (port 8421 was chosen because it is
 rarely used by other software; change it with `--port=`). The page offers everything the console offers and shows
-the proxy's decisions live in the right-hand panel (green = GRANTED, red = DENIED).
+the proxy's decisions live in the right-hand **Proxy activity** panel, written in plain language (green = Allowed,
+red = Denied, blue = storage change). *Technical view* shows the raw `[PROXY]` / `[BRIDGE]` log lines instead, and the
+filter chips narrow the list. The interface follows the system light / dark setting, has a manual theme switch, and
+works on phones. The **How it works** button opens a short guide to both patterns.
 
-* **Acting as** (top right) is the simulated login. It is remembered per browser tab, so you can open **two tabs** -
+* **Acting as** (top bar) is the simulated login. It is remembered per browser tab, so you can open **two tabs** -
   beksultan in one, ruslan in the other - and watch the scenario from both sides.
-* **Storage** shows the active `StorageBackend`; the *Switch* button swaps it at runtime (the Bridge) and migrates the
-  content. The switch appears in the log as `[BRIDGE]`.
-* All action buttons stay enabled for every role on purpose, so you can try a forbidden action (for example *Rename* as
-  a viewer) and see the red "Access denied" message produced by the proxy.
+* **Storage** shows the active `StorageBackend`; pressing the other option (*Local disk* / *Database*) swaps it at
+  runtime (the Bridge) and migrates the content. The switch appears in the log as `[BRIDGE]`.
+* The **Your access** column shows whether you are an Owner or a Viewer of each file, and the *Who can do what* table
+  in the sidebar lists the permissions of both roles.
+* All actions stay available for every role on purpose, so you can try a forbidden action (for example *Delete* from
+  the three-dot menu as a viewer) and see the red "Blocked by the Protection Proxy" message produced by the proxy.
 
 The browser is just one more **client of `FileService`**: `web/ApiRouter` (behind `WebServer`) receives only the proxy from
 `FileSystemContext.service()`, so the web layer cannot bypass a permission check. It uses the JDK's built-in HTTP server
 (no extra dependency). Safety measures: the server listens on `127.0.0.1` only (not reachable from the network); the
 `Host` header must be localhost; state-changing requests with a foreign `Origin` are refused and every API call needs the
-custom `X-User` header (which a cross-site form cannot send); request bodies are limited to 4 MB; only the three page files
-(`index.html`, `app.js`, `style.css`) are served, from a fixed whitelist; the page has a strict Content-Security-Policy and inserts file names / contents as plain text,
+custom `X-User` header (which a cross-site form cannot send); request bodies are limited to 4 MB; only the page files
+(`index.html`, `app.js`, `theme.js`, `style.css`, `icons.svg`, `favicon.svg` and two Geist font files) are served, from a fixed whitelist
+(fonts and icons are bundled, so the page makes no external requests); the page has a strict Content-Security-Policy and inserts file names / contents as plain text,
 never as HTML. Errors map to HTTP codes: validation 400, access denied 403, not found 404, conflict 409.
 
 | Method and path | Purpose |
@@ -565,7 +571,8 @@ src/main/java/com/assignment3/filemanager/
   model/       User, UserDirectory, FileRecord, Folder, FileType, Role, Permission
   exception/   FileManagerException + Validation / NotFound / Conflict / AccessDenied / Storage exceptions
   util/        Validator
-src/main/resources/web/       index.html, app.js, style.css (the browser interface)
+src/main/resources/web/       index.html, app.js, theme.js, style.css, icons.svg, favicon.svg, fonts/ (the browser interface;
+                              Geist fonts: SIL OFL 1.1, Phosphor icons: MIT)
 src/test/java/com/assignment3/filemanager/   9 test classes + TestSupport (+ web/JsonTest)
 ```
 

@@ -3,79 +3,247 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>File Manager - Bridge + Proxy</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A file manager that demonstrates the Bridge pattern (swappable storage) and the Protection Proxy pattern (permission checks).">
+  <title>File Manager - Bridge + Protection Proxy</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/style.css">
+  <script src="/theme.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to files</a>
+
   <header class="topbar">
     <div class="brand">
-      <h1>File Manager</h1>
-      <span class="sub">Bridge + Protection Proxy demo</span>
-    </div>
-    <div class="controls">
-      <label class="who">Acting as
-        <select id="userSelect" aria-label="Acting user"></select>
-      </label>
-      <div class="storage" title="Bridge: the FileManager talks to a StorageBackend interface. Switching swaps the implementation at runtime.">
-        <span>Storage</span>
-        <strong id="storageName">-</strong>
-        <button id="switchStorage" class="ghost" type="button">Switch</button>
+      <span class="brand-mark" aria-hidden="true"><svg class="icon"><use href="/icons.svg#i-folder-simple"></use></svg></span>
+      <div class="brand-text">
+        <h1>File Manager</h1>
+        <p>Bridge + Protection Proxy demo</p>
       </div>
+    </div>
+
+    <div class="topbar-controls">
+      <div class="control">
+        <span class="control-label" id="actingLabel">Acting as</span>
+        <div class="segmented" id="userSwitch" role="radiogroup" aria-labelledby="actingLabel"></div>
+      </div>
+      <div class="control">
+        <span class="control-label" id="storageLabel">Storage</span>
+        <div class="segmented" id="storageSwitch" role="radiogroup" aria-labelledby="storageLabel"></div>
+      </div>
+      <button id="guideBtn" class="btn ghost" type="button">
+        <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-question"></use></svg>
+        <span class="btn-text">How it works</span>
+      </button>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Switch theme">
+        <svg class="icon" aria-hidden="true"><use id="themeIcon" href="/icons.svg#i-moon"></use></svg>
+      </button>
     </div>
   </header>
 
-  <main class="layout">
-    <aside class="sidebar">
-      <h2>Folders</h2>
-      <ul id="folderList" class="folders"></ul>
-      <button id="newFolder" class="primary wide" type="button">+ New folder</button>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Folders and permissions">
+      <section aria-labelledby="foldersTitle">
+        <div class="side-head">
+          <h2 id="foldersTitle">Folders</h2>
+          <button id="newFolder" class="icon-btn sm" type="button" aria-label="New folder" title="New folder">
+            <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-folder-simple-plus"></use></svg>
+          </button>
+        </div>
+        <ul id="folderList" class="folder-list"></ul>
+      </section>
 
-      <div class="legend">
-        <h2>Roles</h2>
-        <p><span class="badge owner">OWNER</span> read, rename, delete, share, move</p>
-        <p><span class="badge viewer">VIEWER</span> read only (files shared with you)</p>
-        <p class="hint">All buttons stay enabled on purpose: try an action you are not allowed to do and watch the proxy refuse it.</p>
-      </div>
-    </aside>
-
-    <section class="content">
-      <div class="toolbar">
-        <input id="search" type="search" placeholder="Search files by name" autocomplete="off" aria-label="Search files by name">
-        <button id="newFile" class="primary" type="button">+ New file</button>
-      </div>
-      <h2 id="viewTitle">All files</h2>
-      <div class="table-wrap">
-        <table class="files">
+      <section class="matrix" aria-labelledby="matrixTitle">
+        <h2 id="matrixTitle">Who can do what</h2>
+        <table>
           <thead>
             <tr>
-              <th>Name</th><th>Size</th><th>Owner</th><th>Your role</th><th>Created</th>
-              <th>Shared with</th><th>Folder</th><th>Actions</th>
+              <th scope="col"><span class="sr-only">Action</span></th>
+              <th scope="col"><span class="badge owner">Owner</span></th>
+              <th scope="col"><span class="badge viewer">Viewer</span></th>
             </tr>
           </thead>
-          <tbody id="fileRows"></tbody>
+          <tbody>
+            <tr>
+              <th scope="row">Read</th>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+            </tr>
+            <tr>
+              <th scope="row">Rename</th>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+              <td><svg class="icon no" role="img" aria-label="Not allowed"><use href="/icons.svg#i-prohibit"></use></svg></td>
+            </tr>
+            <tr>
+              <th scope="row">Share</th>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+              <td><svg class="icon no" role="img" aria-label="Not allowed"><use href="/icons.svg#i-prohibit"></use></svg></td>
+            </tr>
+            <tr>
+              <th scope="row">Move</th>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+              <td><svg class="icon no" role="img" aria-label="Not allowed"><use href="/icons.svg#i-prohibit"></use></svg></td>
+            </tr>
+            <tr>
+              <th scope="row">Delete</th>
+              <td><svg class="icon yes" role="img" aria-label="Allowed"><use href="/icons.svg#i-check-circle"></use></svg></td>
+              <td><svg class="icon no" role="img" aria-label="Not allowed"><use href="/icons.svg#i-prohibit"></use></svg></td>
+            </tr>
+          </tbody>
         </table>
-      </div>
-      <p id="emptyNote" class="empty" hidden>Nothing to show here yet.</p>
-    </section>
-
-    <aside class="log">
-      <h2>Proxy decisions <span class="live">live</span></h2>
-      <ol id="logList"></ol>
+        <p class="hint">You own the files you create. Files others share with you make you a Viewer. Every button stays clickable on purpose, so you can try a blocked action and watch the proxy refuse it.</p>
+      </section>
     </aside>
-  </main>
 
-  <div id="toasts" aria-live="polite"></div>
+    <main id="main" class="content" tabindex="-1">
+      <section id="quickstart" class="quickstart" aria-labelledby="quickstartTitle" hidden>
+        <div class="quickstart-body">
+          <h2 id="quickstartTitle">Try the permission check in a minute</h2>
+          <ol class="flow">
+            <li><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-share-network"></use></svg>Share a file with someone</li>
+            <li class="flow-arrow" aria-hidden="true"><svg class="icon"><use href="/icons.svg#i-arrow-right"></use></svg></li>
+            <li><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-users"></use></svg>Switch to that person at the top</li>
+            <li class="flow-arrow" aria-hidden="true"><svg class="icon"><use href="/icons.svg#i-arrow-right"></use></svg></li>
+            <li><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-prohibit"></use></svg>Try to delete the file and watch the activity panel</li>
+          </ol>
+        </div>
+        <div class="quickstart-actions">
+          <button id="quickstartGuide" class="btn sm" type="button">Read the full guide</button>
+          <button id="quickstartClose" class="icon-btn sm" type="button" aria-label="Dismiss this tip" title="Dismiss">
+            <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-x"></use></svg>
+          </button>
+        </div>
+      </section>
 
-  <dialog id="dialog">
-    <form id="dialogForm">
-      <h3 id="dialogTitle"></h3>
-      <div id="dialogFields"></div>
+      <div class="page-head">
+        <div class="page-title">
+          <h2 id="viewTitle">All files</h2>
+          <p id="viewSub" class="sub"></p>
+        </div>
+        <div class="page-actions">
+          <label class="search">
+            <span class="sr-only">Search files by name</span>
+            <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-magnifying-glass"></use></svg>
+            <input id="search" type="search" placeholder="Search by name" autocomplete="off">
+            <kbd aria-hidden="true">/</kbd>
+          </label>
+          <button id="newFile" class="btn primary" type="button">
+            <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-file-plus"></use></svg>
+            New file
+          </button>
+        </div>
+      </div>
+
+      <div class="files-card">
+        <div class="table-wrap">
+          <table class="files">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Your access</th>
+                <th scope="col">Shared with</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="fileRows"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="state" hidden></div>
+      </div>
+    </main>
+
+    <aside class="activity" aria-labelledby="activityTitle">
+      <div class="activity-head">
+        <h2 id="activityTitle">Proxy activity</h2>
+        <span id="liveStatus" class="live" role="status">Live</span>
+      </div>
+      <p class="sub">Every action goes through the Protection Proxy first. Its decisions show up here as they happen.</p>
+
+      <div class="activity-tools">
+        <div class="filters" role="group" aria-label="Filter activity">
+          <button type="button" class="chip-btn" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="chip-btn" data-filter="granted" aria-pressed="false">Allowed</button>
+          <button type="button" class="chip-btn" data-filter="denied" aria-pressed="false">Denied</button>
+          <button type="button" class="chip-btn" data-filter="bridge" aria-pressed="false">Storage</button>
+        </div>
+        <label class="switch">
+          <input id="rawToggle" type="checkbox">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span class="switch-label">Technical view</span>
+        </label>
+      </div>
+
+      <ol id="logList" class="log-list" aria-live="off"></ol>
+      <div id="logEmpty" class="log-empty" hidden></div>
+    </aside>
+  </div>
+
+  <div id="menu" class="menu" role="menu" hidden></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <dialog id="dialog" class="dialog" aria-labelledby="dialogTitle" aria-describedby="dialogDesc">
+    <form id="dialogForm" novalidate>
+      <header class="dialog-head">
+        <span id="dialogIcon" class="dialog-icon" aria-hidden="true"><svg class="icon"><use href="/icons.svg#i-info"></use></svg></span>
+        <div class="dialog-heading">
+          <h3 id="dialogTitle"></h3>
+          <p id="dialogDesc" class="sub" hidden></p>
+        </div>
+        <button type="button" id="dialogClose" class="icon-btn sm" aria-label="Close dialog">
+          <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-x"></use></svg>
+        </button>
+      </header>
+      <div id="dialogMeta" class="dialog-meta" hidden></div>
+      <div id="dialogFields" class="dialog-fields"></div>
       <pre id="dialogBody" hidden></pre>
-      <menu>
-        <button type="button" id="dialogCancel" class="ghost">Cancel</button>
-        <button type="submit" id="dialogOk" class="primary">OK</button>
-      </menu>
+      <footer class="dialog-foot">
+        <button type="button" id="dialogCancel" class="btn">Cancel</button>
+        <button type="submit" id="dialogOk" class="btn primary">OK</button>
+      </footer>
     </form>
+  </dialog>
+
+  <dialog id="guide" class="dialog wide" aria-labelledby="guideTitle">
+    <div class="guide">
+      <header class="dialog-head">
+        <span class="dialog-icon" aria-hidden="true"><svg class="icon"><use href="/icons.svg#i-lightbulb"></use></svg></span>
+        <div class="dialog-heading">
+          <h3 id="guideTitle">How this demo works</h3>
+          <p class="sub">Two design patterns, one small file manager.</p>
+        </div>
+        <button type="button" id="guideClose" class="icon-btn sm" aria-label="Close guide">
+          <svg class="icon" aria-hidden="true"><use href="/icons.svg#i-x"></use></svg>
+        </button>
+      </header>
+
+      <section class="guide-block">
+        <h4><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-shield-check"></use></svg>Protection Proxy: who may do what</h4>
+        <p>A guard stands between this page and the file manager. Before every action it looks up your role for that file. Owners can do everything. Viewers can only read. A refused action never reaches the file manager, and the guard writes every decision to the activity panel.</p>
+        <p class="try"><strong>Try it:</strong> as Beksultan, create a file and share it with Ruslan. Switch to Ruslan, open the file (allowed), then try to delete it (blocked).</p>
+      </section>
+
+      <section class="guide-block">
+        <h4><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-arrows-left-right"></use></svg>Bridge: swap where files are kept</h4>
+        <p>The file manager does not know where bytes are stored. It talks to a storage interface, and you can plug in a different one while the app runs. The top bar lets you choose between Local disk and Database. Your files, owners and sharing stay exactly the same, because only the storage behind the interface changes.</p>
+        <p class="try"><strong>Try it:</strong> press Database in the top bar, then open any file. The content is still there. The switch appears in the activity panel.</p>
+      </section>
+
+      <section class="guide-block">
+        <h4><svg class="icon" aria-hidden="true"><use href="/icons.svg#i-broadcast"></use></svg>Reading the activity panel</h4>
+        <ul class="legend">
+          <li><span class="swatch granted"></span><strong>Allowed</strong> The proxy let the action through.</li>
+          <li><span class="swatch denied"></span><strong>Denied</strong> The proxy stopped the action.</li>
+          <li><span class="swatch bridge"></span><strong>Storage</strong> The storage backend was swapped.</li>
+        </ul>
+        <p class="sub">Turn on Technical view to see the raw log lines exactly as the server writes them.</p>
+      </section>
+
+      <footer class="dialog-foot">
+        <button type="button" id="guideDone" class="btn primary">Got it</button>
+      </footer>
+    </div>
   </dialog>
 
   <script src="/app.js"></script>

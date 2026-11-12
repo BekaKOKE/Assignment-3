@@ -29,12 +29,19 @@ public final class WebServer implements AutoCloseable {
             "/", "index.html",
             "/index.html", "index.html",
             "/app.js", "app.js",
-            "/style.css", "style.css");
+            "/theme.js", "theme.js",
+            "/style.css", "style.css",
+            "/icons.svg", "icons.svg",
+            "/favicon.svg", "favicon.svg",
+            "/fonts/Geist-Variable.woff2", "fonts/Geist-Variable.woff2",
+            "/fonts/GeistMono-Variable.woff2", "fonts/GeistMono-Variable.woff2");
 
     private static final Map<String, String> CONTENT_TYPES = Map.of(
             "html", "text/html; charset=utf-8",
             "js", "text/javascript; charset=utf-8",
-            "css", "text/css; charset=utf-8");
+            "css", "text/css; charset=utf-8",
+            "svg", "image/svg+xml",
+            "woff2", "font/woff2");
 
     private final HttpServer server;
     private final ExecutorService workers;

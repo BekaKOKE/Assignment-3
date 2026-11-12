@@ -199,7 +199,13 @@ class WebApiTest {
         assertTrue(page.csp() != null && page.csp().contains("default-src 'self'"), "CSP header");
         assertEquals(200, call("GET", "/app.js", null, null).status());
         assertEquals(200, call("GET", "/style.css", null, null).status());
+        for (String asset : new String[] {"/theme.js", "/icons.svg", "/favicon.svg",
+                "/fonts/Geist-Variable.woff2", "/fonts/GeistMono-Variable.woff2"}) {
+            assertEquals(200, call("GET", asset, null, null).status(), asset + " is served");
+        }
 
+        assertEquals(404, call("GET", "/fonts/Other.woff2", null, null).status(), "only whitelisted fonts");
+        assertEquals(404, call("GET", "/fonts/../app.js", null, null).status(), "no path tricks in /fonts");
         assertEquals(404, call("GET", "/web/index.html", null, null).status(), "no direct resource paths");
         assertEquals(404, call("GET", "/%2e%2e/pom.xml", null, null).status());
         assertEquals(404, call("GET", "/api/nothing", "beksultan", null).status());
